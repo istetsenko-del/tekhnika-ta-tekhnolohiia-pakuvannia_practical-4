@@ -3,10 +3,10 @@
  const cfg=window.REPORT_DRIVE||{},key='pr4:drive:'+window.COURSE.version;
  let busy=false,memory=null;
  function endpoint(){try{const u=new URL(cfg.webAppUrl);return u.protocol==='https:'&&u.hostname==='script.google.com'&&/^\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(u.pathname)?u:null;}catch{return null;}}
- function status(text,type=''){const el=document.getElementById('drive-status');if(el){el.textContent=text;el.className='email-status '+type;}}
+ function status(text,type=''){const retry=document.getElementById('save-drive');if(retry)retry.hidden=type!=='error';const el=document.getElementById('drive-status');if(el){el.textContent=text;el.className='email-status '+type;}}
  function record(){try{return JSON.parse(localStorage.getItem(key)||'null')||memory;}catch{return memory;}}
  function keep(value){memory=value;try{localStorage.setItem(key,JSON.stringify(value));}catch{}}
- function button(value){busy=value;const el=document.getElementById('save-drive');if(el){el.disabled=value||!endpoint();el.textContent=value?'Збереження…':'Здати роботу на Google Диск';}}
+ function button(value){busy=value;const el=document.getElementById('save-drive');if(el){el.disabled=value||!endpoint();el.textContent=value?'Збереження…':'Повторити збереження';}}
  async function fingerprint(s){const bytes=new TextEncoder().encode(s);if(crypto.subtle){const b=await crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(b),v=>v.toString(16).padStart(2,'0')).join('');}let n=2166136261;for(const b of bytes)n=Math.imul(n^b,16777619);return String(n>>>0);}
  function requestId(){return Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');}
  function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
@@ -26,7 +26,7 @@
  async function submit(){
   if(busy||!endpoint())return;
   const api=window.PR_REPORT;if(!api||!api.ready())return;
-  if(!api.identityReady()){status('Заповніть ПІБ і групу вгорі сторінки, потім натисніть «Здати роботу на Google Диск».','error');return;}
+  if(!api.identityReady()){status('Заповніть ПІБ і групу вгорі сторінки, потім повторіть збереження.','error');return;}
   button(true);
   try{
    const snapshot=JSON.parse(JSON.stringify(api.snapshot())),hash=await fingerprint(JSON.stringify(snapshot));
@@ -45,6 +45,7 @@
    }
    if(result&&result.status==='saved'){
     item.saved=true;item.time=new Date().toISOString();keep(item);
+    queueMicrotask(()=>document.dispatchEvent(new CustomEvent('pr:saved')));
     status('Роботу здано: створення файла на Google Диску підтверджено. Номер здавання: '+item.requestId+'. Власну копію звіту можна завантажити нижче.','success');
    }else if(result&&result.status==='error')status(errorText(result.code),'error');
    else status('Підтвердження поки не отримано. Файл міг зберегтися. Натисніть кнопку повторно: для цього вмісту використовується той самий номер здавання. Також можна завантажити HTML-звіт.','error');
@@ -56,12 +57,12 @@
   const title=document.createElement('h3');title.textContent='Здати роботу викладачеві';panel.append(title);
   const p=document.createElement('p');p.textContent='Звіт зберігається у папці викладача. Інші студенти не отримують доступу до ваших відповідей.';panel.append(p);
   const feedback=document.createElement('p');feedback.id='drive-status';feedback.className='email-status';feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');panel.append(feedback);
-  const btn=document.createElement('button');btn.type='button';btn.id='save-drive';btn.className='button';btn.textContent='Здати роботу на Google Диск';btn.disabled=!endpoint()||busy;btn.addEventListener('click',submit);panel.append(btn);
+  const btn=document.createElement('button');btn.type='button';btn.id='save-drive';btn.className='button';btn.textContent='Повторити збереження';btn.hidden=true;btn.disabled=!endpoint()||busy;btn.addEventListener('click',submit);panel.append(btn);
   const note=document.createElement('p');note.className='hint';note.textContent='Під час здавання передаються ПІБ, група, 10 ваших записів і тестові відповіді. Прогрес до здавання зберігається лише у вашому браузері.';panel.append(note);
   summary.insertBefore(panel,summary.querySelector('.actions'));
   if(!endpoint()){status('Приймач ще не підключений викладачем. Завантажте звіт кнопкою нижче та передайте його викладачеві.');return;}
   if(busy){status('Збереження вже триває. Дочекайтеся підтвердження.');return;}
   if(e.detail.autoSend){submit();return;}
-  const last=record();status(last&&last.saved?'Збереження останньої надісланої версії було підтверджено '+new Date(last.time).toLocaleString('uk-UA')+'. Після змін здайте роботу повторно.':'Натисніть кнопку, щоб зберегти готову роботу в папці викладача.');
+  const last=record();status(last&&last.saved?'Збереження останньої надісланої версії було підтверджено '+new Date(last.time).toLocaleString('uk-UA')+'. Відповіді зафіксовано.':'Очікуємо автоматичного збереження зафіксованої роботи.');
  });
 })();

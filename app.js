@@ -3,7 +3,7 @@
  const course=window.COURSE, key='packaging-practical-4:'+course.version;
  const $=id=>document.getElementById(id);
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const fresh=()=>({version:course.version,name:'',group:'',current:0,steps:course.steps.map(()=>({notes:'',answers:Array(5).fill(''),checks:0,first:null,last:null,passed:false})),updated:null});
+ const fresh=()=>({version:course.version,name:'',group:'',current:0,finalized:false,submitted:false,steps:course.steps.map(()=>({notes:'',answers:Array(5).fill(''),checks:0,first:null,last:null,passed:false})),updated:null});
  let state=fresh(),storageOK=true,summary=false;
  try{
   const raw=localStorage.getItem(key);
@@ -17,16 +17,17 @@
  function correct(q,a){return q.type==='number'?Number.isFinite(numberValue(a))&&Math.abs(numberValue(a)-q.answer)<=q.tolerance+1e-9:Number(a)===q.answer&&a!=='';}
  function nav(){
   const done=count();$('progress').value=done;$('progress-label').textContent=`${done} із 10 кроків`;$('progress-percent').textContent=`${done*10} %`;
-  $('step-nav').innerHTML=course.steps.map((x,i)=>`<button type="button" data-step="${i}" class="nav-step ${state.steps[i].passed?'done':''} ${!summary&&state.current===i?'current':''}" ${i>unlocked()?'disabled':''} ${!summary&&state.current===i?'aria-current="step"':''}><span class="index">${state.steps[i].passed?'✓':String(i+1).padStart(2,'0')}</span><span>${esc(x.title)}</span></button>`).join('');
+  $('step-nav').innerHTML=course.steps.map((x,i)=>`<button type="button" data-step="${i}" class="nav-step ${state.steps[i].passed?'done':''} ${!summary&&state.current===i?'current':''}" ${i>unlocked()||(state.finalized&&!state.submitted)?'disabled':''} ${!summary&&state.current===i?'aria-current="step"':''}><span class="index">${state.steps[i].passed?'✓':String(i+1).padStart(2,'0')}</span><span>${esc(x.title)}</span></button>`).join('');
   $('step-nav').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>go(Number(b.dataset.step))));
   $('summary-button').disabled=done!==10;
  }
  function diagram(){return `<section class="mask-view" aria-label="Схема розгортки й безпечної області"><p class="section-kicker">Карта макета</p><div class="mask-tools"><label><input type="checkbox" id="show-gloss" checked> Безпечна зона А</label><label><input type="checkbox" id="show-foil" checked> Геометрична область вильоту</label></div><svg viewBox="0 0 680 380" role="img" aria-labelledby="drawing-title drawing-desc"><title id="drawing-title">Рукав 170 на 120 мм</title><desc id="drawing-desc">Зліва клапан, потім панелі А, Б, В, Г. Зелена зона на А відповідає відступам 4 мм. Помаранчева зовнішня область позначає виліт 3 мм.</desc><g transform="translate(60 42) scale(3)"><rect class="mask-foil" x="-3" y="-3" width="176" height="96" fill="#edc79a"/><rect width="170" height="90" fill="#fff"/><rect width="10" height="90" fill="#f3d5b5"/><rect class="mask-gloss" x="14" y="3" width="42" height="84"/><path d="M0 0H170V90H0Z" stroke="#315546" stroke-width=".6" fill="none"/><path d="M10 0V90M60 0V90M90 0V90M140 0V90" stroke="#718d72" stroke-width=".5" stroke-dasharray="2 2"/><g text-anchor="middle" font-family="Arial,sans-serif" font-size="5" fill="#193e33"><text x="35" y="48">А</text><text x="75" y="48">Б</text><text x="115" y="48">В</text><text x="155" y="48">Г</text><text x="5" y="-7">10</text><text x="35" y="-7">50</text><text x="75" y="-7">30</text><text x="115" y="-7">50</text><text x="155" y="-7">30 мм</text></g></g></svg><p class="mask-note">Зліва — клапан. Штрихові лінії — бігування. Вертикальний масштаб стиснуто для огляду; задані координати беріть із тексту. Зовнішня область показує геометричний виліт, а не дозвіл задруковувати клейову зону.</p></section>`;}
  function question(q,i,s){const answer=s.answers[i];return `<fieldset class="question" id="question-${i}"><legend><span class="qno">ЗАПИТАННЯ ${i+1} / 5</span>${esc(q.text)}</legend>${q.type==='number'?`<div class="numeric"><input aria-label="Відповідь на запитання ${i+1}, ${esc(q.unit)}" type="text" inputmode="decimal" autocomplete="off" data-question="${i}" value="${esc(answer)}" maxlength="32" placeholder="Введіть число"><span>${esc(q.unit)}</span></div>`:`<div class="answers">${q.options.map((o,j)=>`<label class="option"><input type="radio" name="question-${i}" value="${j}" data-question="${i}" ${String(answer)===String(j)?'checked':''}><span>${esc(o)}</span></label>`).join('')}</div>`}<p class="feedback" hidden></p></fieldset>`;}
  function renderStep(){
+  if(state.finalized&&!state.submitted){renderSummary(false);return;}
   summary=false;$('summary-content').hidden=true;$('step-content').hidden=false;
   const n=state.current, step=course.steps[n],s=state.steps[n];
-  $('step-content').innerHTML=`<div class="step-heading"><span class="counter">КРОК ${String(n+1).padStart(2,'0')} / 10</span><span class="tag">${esc(step.tag)} · ≈ ${step.minutes} хв</span></div><h2 class="step-title" tabindex="-1">${esc(step.title)}</h2><p class="step-intro">${esc(step.intro)}</p><section class="theory" aria-label="Пояснення та вихідні дані"><h3 class="section-kicker">Пояснення та вихідні дані</h3>${step.theory.map(t=>`<p>${esc(t)}</p>`).join('')}</section>${n===1||n===2||n===3?diagram():''}<section class="task"><h3>Ваше рішення</h3><p id="task-prompt">${esc(step.task)}</p><label for="step-notes">Запис для звіту</label><textarea id="step-notes" aria-describedby="task-prompt" placeholder="Запишіть рішення, формули та пояснення…" maxlength="12000">${esc(s.notes)}</textarea><div class="hint">Зміст цього запису оцінює викладач. Тести нижче перевіряють розуміння умов.</div></section><form id="quiz-form" novalidate><div class="quiz-heading"><h3>Перевірка рішення</h3><span>5 запитань</span></div><p class="hint">Для розрахунків використовуйте калькулятор. Вводьте лише число, можна з комою або крапкою. Після перевірки прочитайте пояснення й виправте помилки.</p>${step.questions.map((q,i)=>question(q,i,s)).join('')}<div id="check-status" role="status" aria-live="polite" ${s.last===null?'hidden':''} class="check-status"></div><div class="actions"><button class="button" type="submit">Перевірити відповіді</button><button class="button secondary" type="button" id="next-button" ${s.passed?'':'disabled'}>${n===9?('Завершити й здати роботу'):'Наступний крок →'}</button>${n>0?'<button type="button" id="previous-button" class="button secondary">← Назад</button>':''}</div></form>`;
+  $('step-content').innerHTML=`<div class="step-heading"><span class="counter">КРОК ${String(n+1).padStart(2,'0')} / 10</span><span class="tag">${esc(step.tag)} · ≈ ${step.minutes} хв</span></div><h2 class="step-title" tabindex="-1">${esc(step.title)}</h2><p class="step-intro">${esc(step.intro)}</p><section class="theory" aria-label="Пояснення та вихідні дані"><h3 class="section-kicker">Пояснення та вихідні дані</h3>${step.theory.map(t=>`<p>${esc(t)}</p>`).join('')}</section>${n===1||n===2||n===3?diagram():''}<section class="task"><h3>Ваше рішення</h3><p id="task-prompt">${esc(step.task)}</p><label for="step-notes">Запис для звіту</label><textarea id="step-notes" aria-describedby="task-prompt" placeholder="Запишіть рішення, формули та пояснення…" maxlength="12000">${esc(s.notes)}</textarea><div class="hint">Зміст цього запису оцінює викладач. Тести нижче перевіряють розуміння умов.</div></section><form id="quiz-form" novalidate><div class="quiz-heading"><h3>Перевірка рішення</h3><span>5 запитань</span></div><p class="hint">Для розрахунків використовуйте калькулятор. Вводьте лише число, можна з комою або крапкою. Після перевірки прочитайте пояснення й виправте помилки.</p>${step.questions.map((q,i)=>question(q,i,s)).join('')}<div id="check-status" role="status" aria-live="polite" ${s.last===null?'hidden':''} class="check-status"></div><div class="actions"><button class="button" type="submit">${n===9?'Завершити перевірку та здати роботу':'Перевірити відповіді'}</button><button class="button secondary" type="button" id="next-button" ${s.passed?'':'disabled'}>${n===9?('Завершити й здати роботу'):'Наступний крок →'}</button>${n>0?'<button type="button" id="previous-button" class="button secondary">← Назад</button>':''}</div></form>`;
   $('step-notes').addEventListener('input',e=>{s.notes=e.target.value;if(!s.notes.trim())invalidate();save();});
   $('quiz-form').querySelectorAll('input[data-question]').forEach(input=>input.addEventListener('input',e=>{const i=Number(e.target.dataset.question);s.answers[i]=e.target.value;invalidate(i);save();}));
   $('quiz-form').addEventListener('submit',e=>{e.preventDefault();check();});
@@ -34,6 +35,7 @@
   if(n>0)$('previous-button').addEventListener('click',()=>go(n-1));
   ['gloss','foil'].forEach(type=>{const cb=$('show-'+type);if(cb)cb.addEventListener('change',()=>document.querySelector('.mask-'+type).style.display=cb.checked?'':'none');});
   if(s.last!==null)showResults(s.passed);
+  if(state.finalized){$('quiz-form').querySelectorAll('input,button').forEach(el=>el.disabled=true);$('step-notes').readOnly=true;}
   nav();
  }
  function invalidate(i){
@@ -44,12 +46,16 @@
   const status=$('check-status');status.hidden=false;status.className='check-status';status.textContent='Відповіді змінено. Перевірте цей крок повторно, щоб продовжити.';nav();
  }
  function check(){
+  if(state.finalized)return;
   const n=state.current,s=state.steps[n],step=course.steps[n];
+  if(n===9&&!identityReady())return;
   const missing=s.answers.findIndex((a,i)=>String(a).trim()===''||(step.questions[i].type==='number'&&!Number.isFinite(numberValue(a))));
   if(!s.notes.trim()){message('Спочатку запишіть своє рішення для звіту.');$('step-notes').focus();return;}
   if(missing>=0){message(`Дайте коректну відповідь на запитання ${missing+1}. У числовому полі потрібне лише число.`);$('question-'+missing).querySelector('input').focus();return;}
   const score=step.questions.reduce((a,q,i)=>a+Number(correct(q,s.answers[i])),0);
-  s.checks++;if(s.first===null)s.first=score;s.last=score;s.passed=score===5;save();showResults(true);nav();
+  s.checks++;if(s.first===null)s.first=score;s.last=score;s.passed=score===5;
+  if(n===9&&s.passed&&count()===10){state.finalized=true;save();freezeIdentity();renderSummary(true);return;}
+  save();showResults(true);nav();
   $('check-status').scrollIntoView({block:'center',behavior:'auto'});
  }
  function message(text){const el=$('check-status');el.hidden=false;el.className='check-status error';el.textContent=text;}
@@ -60,11 +66,15 @@
   status.textContent=s.passed?`Крок завершено: 5 із 5. Перша перевірка: ${s.first}/5. Перевірок: ${s.checks}. Запис додано до звіту.`:`Остання перевірка: ${s.last}/5. Прочитайте пояснення й виправте відповіді. Для переходу потрібно 5 із 5 та запис власного рішення. Перша перевірка: ${s.first}/5.`;
   $('next-button').disabled=!s.passed;
  }
- function go(n){if(n>unlocked())return;state.current=n;save();renderStep();const heading=document.querySelector('.step-title');heading.focus({preventScroll:true});heading.scrollIntoView({block:'start',behavior:'auto'});}
+ function go(n){if(state.finalized&&!state.submitted)return;if(n>unlocked())return;state.current=n;save();renderStep();const heading=document.querySelector('.step-title');heading.focus({preventScroll:true});heading.scrollIntoView({block:'start',behavior:'auto'});}
  function renderSummary(autoSend=false){
   if(count()!==10)return;summary=true;$('step-content').hidden=true;$('summary-content').hidden=false;
+  if(state.finalized&&!state.submitted){
+   $('summary-content').innerHTML='<div class="summary-hero"><h2>Роботу завершено.</h2><p>Відповіді зафіксовано. Автоматично зберігаємо звіт викладачеві. Результат з’явиться після підтвердження збереження.</p></div><div class="actions"></div>';
+   nav();$('summary-content').scrollIntoView({block:'start'});document.dispatchEvent(new CustomEvent('pr:summary',{detail:{autoSend:autoSend===true}}));return;
+  }
   const initial=state.steps.reduce((a,s)=>a+(s.first||0),0),checks=state.steps.reduce((a,s)=>a+s.checks,0);
-  $('summary-content').innerHTML=`<div class="summary-hero"><p class="section-kicker" style="color:#d4e8ba">ПРОЄКТ ЗАВЕРШЕНО</p><h2>Макет перевірено за навчальним паспортом.</h2><p>Усі 10 кроків пройдено. Збережіть звіт із відповідями та власними рішеннями й надішліть його викладачеві.</p></div><div class="stats"><div class="stat"><b>${initial}/50</b><span>Правильних відповідей під час перших перевірок</span></div><div class="stat"><b>50/50</b><span>Підсумкове опрацювання після виправлень</span></div><div class="stat"><b>${checks}</b><span>Перевірок за весь прохід</span></div></div><p class="summary-note">Це навчальний тренажер із повторними спробами. Перша перевірка й підсумкове опрацювання — різні показники. Якість плану виправлень та пояснень оцінює викладач; автоматичну оцінку за 12-бальною шкалою сайт не виставляє.</p><ul class="summary-list">${course.steps.map((x,i)=>`<li><span>${String(i+1).padStart(2,'0')} · ${esc(x.title)}<br><small>Перша перевірка ${state.steps[i].first}/5 · перевірок ${state.steps[i].checks}</small></span><button type="button" data-review="${i}">Переглянути</button></li>`).join('')}</ul><div class="actions"><button type="button" class="button" id="download-final">Завантажити звіт HTML ↓</button><button type="button" class="button secondary" id="print-final">Друк / PDF</button></div><p class="hint">Звіт відкривається у браузері та містить усі 10 ваших записів. Перед здаванням перевірте ПІБ і групу. Для PDF використайте друк і виберіть «Зберегти як PDF».</p>`;
+  $('summary-content').innerHTML=`<div class="summary-hero"><p class="section-kicker" style="color:#d4e8ba">ПРОЄКТ ЗАВЕРШЕНО</p><h2>Макет перевірено за навчальним паспортом.</h2><p>Роботу збережено викладачеві. Відповіді зафіксовано; перегляд і завантаження власного звіту залишаються доступними.</p></div><div class="stats"><div class="stat"><b>${initial}/50</b><span>Правильних відповідей під час перших перевірок</span></div><div class="stat"><b>50/50</b><span>Підсумкове опрацювання після виправлень</span></div><div class="stat"><b>${checks}</b><span>Перевірок за весь прохід</span></div></div><p class="summary-note">Це навчальний тренажер із повторними спробами. Перша перевірка й підсумкове опрацювання — різні показники. Якість плану виправлень та пояснень оцінює викладач; автоматичну оцінку за 12-бальною шкалою сайт не виставляє.</p><ul class="summary-list">${course.steps.map((x,i)=>`<li><span>${String(i+1).padStart(2,'0')} · ${esc(x.title)}<br><small>Перша перевірка ${state.steps[i].first}/5 · перевірок ${state.steps[i].checks}</small></span><button type="button" data-review="${i}">Переглянути</button></li>`).join('')}</ul><div class="actions"><button type="button" class="button" id="download-final">Завантажити звіт HTML ↓</button><button type="button" class="button secondary" id="print-final">Друк / PDF</button></div><p class="hint">Звіт відкривається у браузері та містить усі 10 ваших записів. Перед здаванням перевірте ПІБ і групу. Для PDF використайте друк і виберіть «Зберегти як PDF».</p>`;
   $('summary-content').querySelectorAll('[data-review]').forEach(b=>b.addEventListener('click',()=>go(Number(b.dataset.review))));
   $('download-final').addEventListener('click',downloadReport);$('print-final').addEventListener('click',printReport);nav();$('summary-content').scrollIntoView({block:'start'}); document.dispatchEvent(new CustomEvent('pr:summary',{detail:{autoSend:autoSend===true}}));
  }
@@ -73,10 +83,15 @@
  function downloadReport(){if(!identityReady())return;const blob=new Blob([reportHTML()],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ПР4_'+state.name.replace(/[^\p{L}\p{N}_-]/gu,'_').slice(0,80)+'.html';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);}
  function printReport(){if(!identityReady())return;const win=window.open('','_blank');if(!win){$('notice').textContent='Браузер заблокував вкладку друку. Завантажте HTML-звіт, відкрийте його та скористайтеся друком.';return;}let printed=false;const once=()=>{if(!printed&&!win.closed){printed=true;win.print();}};win.opener=null;win.addEventListener('load',once,{once:true});win.document.write(reportHTML());win.document.close();setTimeout(()=>{if(win.document.readyState==='complete')once();},500);}
  $('student-name').value=state.name;$('student-group').value=state.group;
- $('student-name').addEventListener('input',e=>{state.name=e.target.value;save();});$('student-group').addEventListener('input',e=>{state.group=e.target.value;save();});
+ $('student-name').addEventListener('input',e=>{if(state.finalized)return;state.name=e.target.value;save();});$('student-group').addEventListener('input',e=>{if(state.finalized)return;state.group=e.target.value;save();});
  $('summary-button').addEventListener('click',()=>renderSummary(false));
- $('reset-button').addEventListener('click',()=>{if(confirm('Видалити всі відповіді та записи цієї практичної на цьому пристрої? Завантажений звіт залишиться у ваших файлах.')){state=fresh();$('student-name').value='';$('student-group').value='';save();renderStep();$('main').scrollIntoView();}});
+
  window.PR_REPORT={html:reportHTML,identityReady,ready:()=>count()===10,snapshot:()=>({version:course.version,name:state.name,group:state.group,steps:state.steps})};
- state.current=Math.min(state.current,unlocked());renderStep();
+ function freezeIdentity(){$('student-name').disabled=!!state.finalized;$('student-group').disabled=!!state.finalized;}
+ document.addEventListener('pr:saved',()=>{if(!state.finalized)return;state.submitted=true;save();freezeIdentity();renderSummary(false);});
+ if(count()===10&&state.name.trim()&&state.group.trim()){state.finalized=true;save();}
+ freezeIdentity();
+ state.current=Math.min(state.current,unlocked());
+ if(state.finalized)document.addEventListener('DOMContentLoaded',()=>renderSummary(!state.submitted),{once:true});else renderStep();
  if(!storageOK)$('save-status').textContent='Автозбереження недоступне. Не закривайте вкладку до здавання.';
 })();
