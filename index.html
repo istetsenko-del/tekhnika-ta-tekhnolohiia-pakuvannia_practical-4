@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#163c37">
+  <meta name="description" content="Інтерактивна практична робота № 4: перевірка дизайну та додрукарської підготовки. 10 кроків, 50 запитань і власна специфікація.">
+  <title>Практична 04 — Лабораторія макета</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./drive-config.js" defer></script><script src="./data.js" defer></script><script src="./app.js" defer></script><script src="./drive.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Перейти до завдання</a>
+<div class="shell">
+  <aside class="sidebar" aria-label="Навігація практичною роботою">
+    <a href="./" class="brand"><span class="brand-icon" aria-hidden="true">◫</span><span>PACKAGING<br><strong>STUDIO / 04</strong></span></a>
+    <div class="course-label">ТЕХНІКА ТА ТЕХНОЛОГІЯ ПАКУВАННЯ</div>
+    <h2 class="side-title">Лабораторія<br>макета</h2>
+    <div class="progress-copy"><span id="progress-label">0 із 10 кроків</span><span id="progress-percent">0 %</span></div>
+    <progress id="progress" max="10" value="0" aria-label="Завершені кроки"></progress>
+    <nav id="step-nav" aria-label="Кроки роботи"></nav>
+    <button id="summary-button" class="side-report" type="button" disabled>↗ Підсумок і звіт</button>
+    <div class="side-bottom"><span class="save-dot" aria-hidden="true"></span><span id="save-status" role="status">Прогрес зберігається у браузері</span></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><span>ПРАКТИЧНА РОБОТА № 4</span><span class="pill">Онлайн · 4 курс</span></header>
+    <main id="main" tabindex="-1">
+      <div class="page-eyebrow">ВІД МАКЕТА ДО ГОТОВНОСТІ</div>
+      <h1>Макет, у якому<br><em>усе на своїх місцях.</em></h1>
+      <p class="lead">Знайдіть сім невідповідностей у макеті картонного рукава. Перевірте вильоти, текст, фотографію та PDF і підготуйте обґрунтований план виправлень.</p>
+      <section class="overview" aria-label="Як працювати">
+        <div><strong>10</strong><span>кроків перевірки</span></div><div><strong>50</strong><span>запитань із поясненнями</span></div><div><strong>1</strong><span>ваш паспорт макета</span></div>
+        <p>У кожному кроці: прочитайте умови, запишіть рішення й дайте 5 правильних відповідей. Помилки можна виправляти. Орієнтир — 2 онлайн-пари; можна продовжити пізніше на цьому пристрої.</p>
+      </section>
+      <details class="brief" id="brief"><summary><span>Картка замовлення</span><span class="small">Усі базові дані під рукою</span></summary>
+        <div class="brief-body"><div><h3>Картонний рукав</h3><p>Розгортка: <b>170 × 120 мм</b><br>Зліва направо: <b>клапан 10, А 50, Б 30, В 50, Г 30 мм</b>.<br>Початок координат угорі ліворуч клапана, x праворуч, y вниз.</p><p>Навчальні вимоги: виліт <b>3 мм</b>; текст за <b>4 мм</b> від різання й бігування; фото не менше <b>250 ppi</b>. Верх панелей — y = 0.</p></div><div><h3>Паспорт помилкового файла</h3><p>Фон без вильотів; склад на клапані; назва на В повернута на 180°; білий CMYK-текст з overprint; CUT потрапляє в друк; шрифт не вбудований; фото 600 px на ширині 4 дюйми.</p><p>Використовуйте ці відомості як дані попереднього огляду. Професійне ПЗ і фізичний макет не потрібні. Власні пояснення перевіряє викладач.</p></div></div>
+      </details>
+      <section class="identity" aria-label="Дані студента"><label>ПІБ студента<input id="student-name" autocomplete="name" placeholder="Прізвище та ім’я" maxlength="120"></label><label>Група<input id="student-group" placeholder="Наприклад, ВП-41" maxlength="40"></label><p>Прогрес зберігається у цьому браузері. Після кнопки «Завершити й здати роботу» ваші ПІБ, група та відповіді передаються для збереження у папці викладача на Google Диску, якщо приймач підключений. Звіт також можна завантажити.</p></section>
+      <section id="step-content" aria-label="Поточний крок"></section>
+      <section id="summary-content" hidden aria-label="Підсумок роботи"></section>
+      <footer class="footer"><span>Навчальна майстерня · Видавництво та поліграфія</span><button type="button" id="reset-button">Почати заново</button></footer>
+      <p id="notice" role="status" class="notice"></p>
+    </main>
+  </div>
+</div>
+<noscript><p class="noscript">Для інтерактивних завдань увімкніть JavaScript у браузері.</p></noscript>
+</body></html>
